@@ -202,41 +202,27 @@ RankingTree.prototype.process = function(wasRed) {
 	} else if (winnerBranchIndex!=-1 && loserBranchIndex!=-1
 		&& winnerBranchIndex!=loserBranchIndex) { // characters in different branches
 		// intersperse, align at winner/loser
-		var newBranch = winnerBranch.slice(0, winnerCharacterIndex+1);
-		newBranch = newBranch.concat(loserBranch.slice(loserCharacterIndex, loserBranch.length));
-
-		winnerBranch = winnerBranch.slice(winnerCharacterIndex, winnerBranch.length);
-		loserBranch = loserBranch.slice(0, loserCharacterIndex+1);
-
-		if (winnerBranchIndex < loserBranchIndex) {
-			if (loserBranch.length <= 1) { //only the loser is left in the branch -> remove branch
-				delete this.branches[loserBranchIndex];
-				loserBranch = null;
-			}
-			if (winnerBranch.length <= 1) { //only the winner is left in the branch -> remove branch
-				delete this.branches[winnerBranchIndex];
-				winnerBranch = null;
-			}
-		}
-
-		else {
-			if (winnerBranch.length <= 1) { //only the winner is left in the branch -> remove branch
-				delete this.branches[winnerBranchIndex];
-				winnerBranch = null;
-			}
-			if (loserBranch.length <= 1) { //only the loser is left in the branch -> remove branch
-				delete this.branches[loserBranchIndex];
-				loserBranch = null;
-			}
-		}
-
-		if (winnerBranch) //winnerBranch was not deleted
-			this.branches[winnerBranchIndex] = winnerBranch;
-
-		if (loserBranch) //loserBranch was not deleted
-			this.branches[loserBranchIndex] = loserBranch;
-
-		this.branches.unshift(newBranch);
+		var delta = Math.abs(winnerCharacterIndex - loserCharacterIndex);
+        var deltaBranch = winnerCharacterIndex > loserCharacterIndex ? winnerBranch : loserBranch;
+        var newBranch = [];
+        for (var i=0; i<delta; i++) {
+            newBranch.push(deltaBranch.shift());
+        }
+        while (winnerBranch.length > 0 || loserBranch.length > 0) {
+            if (winnerBranch.length > 0)
+                newBranch.push(winnerBranch.shift());
+            if (loserBranch.length > 0)
+                newBranch.push(loserBranch.shift());
+        }
+        // remove old useless branches, add new one
+        if (winnerBranchIndex > loserBranchIndex) {
+            delete this.branches[loserBranchIndex];
+            delete this.branches[winnerBranchIndex];
+        } else {
+            delete this.branches[winnerBranchIndex];
+            delete this.branches[loserBranchIndex];
+        }
+        this.branches.push(newBranch);
 		this.branches = removeEmptyElements(this.branches);
 	} else { // one of the characters is in a tree
 		var bumpDownIndex = -1;
