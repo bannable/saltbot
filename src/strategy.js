@@ -209,7 +209,7 @@ var Chromosome = function() {
 	// confidence weights
 	this.oddsWeight = 1;
 	this.timeWeight = 0.5;
-	this.winPercentageWeight = 1;
+	this.winPercentageWeight = 3;
 	this.crowdFavorWeight = 1;
 	this.illumFavorWeight = 1;
 	// tier scoring
@@ -219,12 +219,19 @@ var Chromosome = function() {
 	this.wB = 2;
 	this.wP = 1;
 	this.wU = 0.5;
-	this.lX = 1;
+	this.lX = 2.5;
 	this.lS = 2;
-	this.lA = 3;
-	this.lB = 4;
-	this.lP = 5;
-	this.lU = 0.5;
+	this.lA = 1.5;
+	this.lB = 1;
+	this.lP = .5;
+	this.lU = 0.25;
+	// win% weights
+	this.wpX = 3;
+	this.wpS = 5;
+	this.wpA = 4;
+	this.wpB = 2;
+	this.wpP = 1;
+	this.wpU = .5;
 	// odds weights
 	this.oX = 5;
 	this.oS = 4;
@@ -239,12 +246,12 @@ var Chromosome = function() {
 	this.wtB = 2;
 	this.wtP = 1;
 	this.wtU = 0.5;
-	this.ltX = 1;
+	this.ltX = 2.5;
 	this.ltS = 2;
-	this.ltA = 3;
-	this.ltB = 4;
-	this.ltP = 5;
-	this.ltU = 0.5;
+	this.ltA = 1.5;
+	this.ltB = 1;
+	this.ltP = 0.5;
+	this.ltU = 0.25;
 	return this;
 };
 Chromosome.prototype.loadFromJSON = function(json) {
@@ -312,7 +319,69 @@ var CSStats = function(cObj, chromosome) {
 	//added these to accurately track total wins/losses
 	this.totalWins = cObj.wins.length;
 	this.totalLosses = cObj.losses.length;
+	this.charTier = ["", "", "", "", "", ""];
+	this.charRecentTierWin = "";
+	this.charRecentTierLoss = "";
 
+	var wint = 0;
+	var losst = 0;
+	while (wint < cObj.wins.length) {
+		switch (cObj.wins[wint]) {
+			case "U":
+				this.charTier[5] += "U";
+				break;
+			case "P":
+				this.charTier[4] += "P";
+				break;
+			case "B":
+				this.charTier[3] += "B";
+				break;
+			case "A":
+				this.charTier[2] += "A";
+				break;
+			case "S":
+				this.charTier[1] += "S";
+				break;
+			case "X":
+				this.charTier[0] += "X";
+				break;
+		}
+		if (wint == (cObj.wins.length - 1)) {
+			this.charRecentTierWin = cObj.wins[wint];
+		}
+		wint++;
+	}
+	while (losst < cObj.losses.length) {
+		switch (cObj.losses[losst]) {
+			case "U":
+				this.charTier[5] += "U";
+				break;
+			case "P":
+				this.charTier[4] += "P";
+				break;
+			case "B":
+				this.charTier[3] += "B";
+				break;
+			case "A":
+				this.charTier[2] += "A";
+				break;
+			case "S":
+				this.charTier[1] += "S";
+				break;
+			case "X":
+				this.charTier[0] += "X";
+				break;
+		}
+		if (losst == (cObj.losses.length - 1)) {
+			this.charRecentTierLoss = cObj.losses[losst];
+		}
+		losst++;
+	}
+	this.charTier.sort(function(a, b){return b.length>a.length});  //sort according to longest length- get most common tier of recorded matches
+	if (this.charTier[0].length == 0) {  //make sure there is at least something there, Unknown tier if nothing else found in wins or losses- prevents exceptions and lessens handling needed later
+		this.charTier[0] += "U";
+	}
+	
 	for (var jj = 0; jj < cObj.wins.length; jj++)
 		this.wins += chromosome["w" + cObj.wins[jj]];  //sets wins to the int value of the chromosome weight of win "w" + tier of character win (cObj.wins[jj] returns string of tier it won in, ex: "A", "B", "S")
 
@@ -423,20 +492,110 @@ ConfidenceScore.prototype.execute = function(info) {
 		this.oddsConfidence = null;
 	}
 	
-	var c1WT = c1Stats.totalWins + c1Stats.totalLosses;  //char 1 total matches; THIS AND THINGS BELOW IT WERE PREVIOUSLY USING CHROMOSOME-WEIGHTED TOTALS (which is cute, but WRONG)
-	var c2WT = c2Stats.totalWins + c2Stats.totalLosses;
-	var c1WP = (c1WT != 0) ? c1Stats.totalWins / c1WT : 0; //determines char 1 win %
-	var c2WP = (c2WT != 0) ? c2Stats.totalWins / c2WT : 0;
+	//testing variables area
+	var c1WinsTotal = (c1Stats.totalWins != null) ? c1Stats.totalWins : 0;
+	var c2WinsTotal = (c2Stats.totalWins != null) ? c2Stats.totalWins : 0;
+	var c1LossesTotal = (c1Stats.totalLosses != null) ? c1Stats.totalLosses : 0;
+	var c2LossesTotal = (c2Stats.totalLosses != null) ? c2Stats.totalLosses : 0;
+	
+	
+	var c1WT = c1WinsTotal + c1LossesTotal;  //char 1 total matches; THIS AND THINGS BELOW IT WERE PREVIOUSLY USING CHROMOSOME-WEIGHTED TOTALS (which is cute, but WRONG)
+	var c2WT = c2WinsTotal + c2LossesTotal;
+	var c1WP = (c1WT != 0) ? c1WinsTotal / c1WT : 0; //determines char 1 win %
+	var c2WP = (c2WT != 0) ? c2WinsTotal / c2WT : 0;
 
-	var wpTotal = c1Stats.totalWins+c2Stats.totalWins;  //total wins between both characters
-	var c1WPDisplay = wpTotal>0?c1Stats.totalWins/wpTotal:0;  //percentage of combined wins that belong to char 1  (I NEED TO POTENTIALLY WEIGHT THIS AGAINST ACTUAL # OF MATCHES IF THIS GETS USED [which it isn't])
-	var c2WPDisplay = wpTotal>0?c2Stats.totalWins/wpTotal:0;
-	if (this.debug) winsMessage = "\xBB WINS/LOSSES:     weighted totals as % (red:blue) -> ("+(c1WPDisplay*100).toFixed(0)+" : "+(c2WPDisplay*100).toFixed(0)+")"+
+	var wpTotal = c1WinsTotal+c2WinsTotal;  //total wins between both characters
+	var c1WPDisplay = wpTotal>0?c1WinsTotal/wpTotal:0;  //percentage of combined wins that belong to char 1  (I NEED TO POTENTIALLY WEIGHT THIS AGAINST ACTUAL # OF MATCHES IF THIS GETS USED [which it isn't])
+	var c2WPDisplay = wpTotal>0?c2WinsTotal/wpTotal:0;
+	if (this.debug) winsMessage = "\xBB WINS/LOSSES:     " + "unweighted totals as % (red:blue) -> (" + (c1WP * 100).toFixed(0) + " : " + (c2WP * 100).toFixed(0) + ")" +"  weighted totals as % (red:blue) -> ("+(c1WPDisplay*100).toFixed(0)+" : "+(c2WPDisplay*100).toFixed(0)+")"+
 				  "  ::  unweighted (red W:L)(blue W:L) -> ("+ c1.wins.length + ":" + c1.losses.length + ")(" + c2.wins.length + ":" + c2.losses.length+")"+
 				  "  ::  details (red W:L)(blue W:L) -> (" + c1.wins.toString().replace(/,/g, '') + ":" + c1.losses.toString().replace(/,/g, '') + ")" +
 				                                  "(" + c2.wins.toString().replace(/,/g, '') + ":" + c2.losses.toString().replace(/,/g, '') + ")";
 
 	//debug testing area
+	var charTiers = ["U", "P", "B", "A", "S", "X"];
+	var matchTier;
+	var c1t = c1Stats.charTier[0].slice(0, 1);
+	var c1rw = (c1Stats.charRecentTierWin != "") ? c1Stats.charRecentTierWin : c1t;
+	var c1rl = (c1Stats.charRecentTierLoss != "") ? c1Stats.charRecentTierLoss : c1t;
+	var c2t = c2Stats.charTier[0].slice(0, 1);
+	var c2rw = (c2Stats.charRecentTierWin != "") ? c2Stats.charRecentTierWin : c2t;
+	var c2rl = (c2Stats.charRecentTierLoss != "") ? c2Stats.charRecentTierLoss : c2t;
+	
+	if ((c1t == c2t) && (c1rw == c2rw) && (c1rl == c2rl)) {
+		matchTier = c1t;
+		if (this.debug) {
+			console.log("matchTier is " + matchTier + " tier, by agreement of c1t & c2t, c1rw & c2rw, c1rl & c2rl");
+		}
+	}
+	else if ((c1t != c2t) && (c1rw == c2rw) && (c1rl == c2rl)) {
+		matchTier = c1rw;
+		if (this.debug) {
+			console.log("matchTier is " + matchTier + " tier, by agreement of c1rw & c2rw, c1rl & c2rl");
+		}
+	}
+	else if ((c1t != c2t) && (c1rw != c2rw) && (c1rl == c2rl)) {
+		matchTier = c1rl;
+		if (this.debug) {
+			console.log("matchTier is " + matchTier + " tier, by agreement of c1rl & c2rl only");
+		}
+	}
+	else if ((c1t == c2t) && (c1rw != c2rw) && (c1rl != c2rl)) {
+		matchTier = (charTiers.indexOf(c1t) > charTiers.indexOf(c2t)) ? c1t : c2t;
+		if (this.debug) {
+			console.log("matchTier is " + matchTier + " tier, by fallback to agreement of c1t & c2t only");
+		}
+	}
+	else if ((c1t != "U") & (c2t == "U")) {
+		matchTier = c1t;
+		if (this.debug) {
+			console.log("matchTier is " + matchTier + " tier, because c2t had only or primarily Unknown tier matches");
+		}
+	}
+	else if ((c1t == "U") & (c2t != "U")) {
+		matchTier = c2t;
+		if (this.debug) {
+			console.log("matchTier is " + matchTier + " tier, because c1t had only or primarily Unknown tier matches");
+		}
+	}
+	else {
+		matchTier = "U";
+		if (this.debug) {
+			console.log("matchTier is " + matchTier + " tier, by failing to otherwise determine the tier");
+		}
+	}
+	
+	/* currently deprecated code (more robust system implemented above))
+	if ((charTiers.indexOf(c1Stats.charTier) >= charTiers.indexOf(c2Stats.charTier)) && c1Stats.charTier != null && c2Stats.charTier != null) {
+		matchTier = c1Stats.charTier;
+		if (this.debug) {
+			console.log("matchTier is " + matchTier + " tier");
+		}
+	}
+	else if ((charTiers.indexOf(c1Stats.charTier) <= charTiers.indexOf(c2Stats.charTier)) && c1Stats.charTier != null && c2Stats.charTier != null) {
+		matchTier = c2Stats.charTier;
+		if (this.debug) {
+			console.log("matchTier is " + matchTier + " tier");
+		}
+	}
+	else if ((c1Stats.charTier != null) && c2Stats.charTier == null) {
+		matchTier = c1Stats.charTier;
+		if (this.debug) {
+			console.log("matchTier is " + matchTier + " tier");
+		}
+	}
+	else if ((c1Stats.charTier == null) && c2Stats.charTier != null) {
+		matchTier = c2Stats.charTier;
+		if (this.debug) {
+			console.log("matchTier is " + matchTier + " tier");
+		}
+	}
+	else {
+		if(this.debug) {
+			console.log("Something bad happened when determining match tier.")
+		}
+	}
+	*/
 	
 	//adds each character's win/loss scores to their score, weighted for the lower number of total matches between the two characters	
 	var zValueWeighting = 0;
@@ -449,43 +608,57 @@ ConfidenceScore.prototype.execute = function(info) {
 	else {
 		zValueWeighting = 1;
 	}
-	console.log("zValueWeighting = " + zValueWeighting.toFixed(2));
+	if (this.debug) {
+		console.log("zValueWeighting = " + zValueWeighting.toFixed(2));
+	}
+	
+	c1ScoreValue = 0;
+	c2ScoreValue = 0;
+	
 	if ((c1WT > c2WT) && (c1WT != null) && (c2WT != null)) {
-		c1Score += (c1Stats.wins + c1Stats.losses);
-		c2Score += ((c2Stats.wins + c2Stats.losses) * zValueWeighting);  //character with less recorded data gets a modifier for their score to make it like both characters had the same amount of data
-		totalWeight += (c1Stats.wins + c1Stats.losses); //preparing for the final confidence calculation
-		totalWeight += ((c2Stats.wins + c2Stats.losses) * zValueWeighting);
+		c1ScoreValue += (c1Stats.wins + c1Stats.losses);
+		c2ScoreValue += ((c2Stats.wins + c2Stats.losses) * zValueWeighting);  //character with less recorded data gets a modifier for their score to make it like both characters had the same amount of data
+		if ((matchTier != null) && (charTiers.indexOf(matchTier) >= 0)) {
+			c1Score += ((this.chromosome["w" + matchTier]) * (c1ScoreValue / (c1ScoreValue + c2ScoreValue)))
+			c2Score += ((this.chromosome["w" + matchTier]) * (c2ScoreValue / (c1ScoreValue + c2ScoreValue)))
+			totalWeight += this.chromosome["w" + matchTier]; //preparing for the final confidence calculation
+			if (this.debug){
+				console.log("matchTier scaling is " + (this.chromosome["w" + matchTier]).toFixed(2));
+			}
+		}
 		if (this.debug) {
 			console.log("c1Score after win/loss weight: " + c1Score.toFixed(2));
 			console.log("c2Score after win/loss weight: " + c2Score.toFixed(2));
+			console.log("matchTier chromosome call is " + "w" + matchTier);
 		}
 	}
 	else if ((c1WT < c2WT) && (c1WT != null) && (c2WT != null)) {
-		c1Score += ((c1Stats.wins + c1Stats.losses) * zValueWeighting);
-		c2Score += (c2Stats.wins + c2Stats.losses);
-		totalWeight += ((c1Stats.wins + c1Stats.losses) * zValueWeighting);
-		totalWeight += (c2Stats.wins + c2Stats.losses);
+		c1ScoreValue += ((c1Stats.wins + c1Stats.losses) * zValueWeighting);  //character with less recorded data gets a modifier for their score to make it like both characters had the same amount of data
+		c2ScoreValue += (c2Stats.wins + c2Stats.losses);
+		if ((matchTier != null) && (charTiers.indexOf(matchTier) >= 0)) {
+			c1Score += ((this.chromosome["w" + matchTier]) * (c1ScoreValue / (c1ScoreValue + c2ScoreValue)))
+			c2Score += ((this.chromosome["w" + matchTier]) * (c2ScoreValue / (c1ScoreValue + c2ScoreValue)))
+			totalWeight += this.chromosome["w" + matchTier]; //preparing for the final confidence calculation
+			if (this.debug) {
+				console.log("matchTier scaling is " + (this.chromosome["w" + matchTier]).toFixed(2));
+			}
+		}
 		if (this.debug) {
 			console.log("c1Score after win/loss weight: " + c1Score.toFixed(2));
 			console.log("c2Score after win/loss weight: " + c2Score.toFixed(2));
+			console.log("matchTier chromosome call is " + "w" + matchTier);
 		}
 	}
 	else {
 		if (this.debug) {
-			console.log("c1WT or c2WT is null and that is why you are seeing this.");
+			console.log("c1WT or c2WT is null, or matchTier is null or of invalid value and that is why you are seeing this.");
 		}
 	}
 												  
 	//adds win percentage weighting to whichever character's win% is higher's score
-	if ((c1WP > c2WP) && (c1WP != null) && (c2WP != null)) {
-		c1Score += winPercentageWeight;
-		if (this.debug) {
-			console.log("c1Score after win% weight: " + c1Score.toFixed(2));
-			console.log("c2Score after win% weight: " + c2Score.toFixed(2));
-		}
-	}
-	else if ((c1WP < c2WP) && (c1WP != null) && (c2WP != null)) {
-		c2Score += winPercentageWeight;
+	if ((c1WP != null) && (c2WP != null) && (matchTier != null) && (charTiers.indexOf(matchTier) >=0)) {
+		c1Score += ((this.chromosome["wp" + matchTier]) * (c1WP / (c1WP + c2WP)));
+		c2Score += ((this.chromosome["wp" + matchTier]) * (c2WP / (c2WP + c1WP)));
 		if (this.debug) {
 			console.log("c1Score after win% weight: " + c1Score.toFixed(2));
 			console.log("c2Score after win% weight: " + c2Score.toFixed(2));
@@ -493,62 +666,38 @@ ConfidenceScore.prototype.execute = function(info) {
 	}
 	else {
 		if (this.debug) {
-			console.log("c1WP or c2WP is null or they are equal and that is why you are seeing this.");
+			console.log("c1WP or c2WP is null or they are equal, or matchTier is null or of invalid value and that is why you are seeing this.");
 		}
 	}
 
 	//and now we do the same for odds weighting
-	if (c1Stats.averageOdds != null && c2Stats.averageOdds != null) {
-		if (c1Stats.averageOdds > c2Stats.averageOdds) {
-			c1Score += oddsWeight;
-			if (this.debug) {
-				console.log("c1Score after odds weight: " + c1Score.toFixed(2));
-				console.log("c2Score after odds weight: " + c2Score.toFixed(2));
-			}
-		}
-		else if (c1Stats.averageOdds < c2Stats.averageOdds) {
-			c2Score += oddsWeight;
-			if (this.debug) {
-				console.log("c1Score after odds weight: " + c1Score.toFixed(2));
-				console.log("c2Score after odds weight: " + c2Score.toFixed(2));
-			}	
+	if ((c1Stats.averageOdds != null) && (c2Stats.averageOdds != null) && (matchTier != null) && (charTiers.indexOf(matchTier) >=0)) {
+		c1Score += ((this.chromosome["o" + matchTier]) * (c1Stats.averageOdds / (c1Stats.averageOdds + c2Stats.averageOdds)));
+		c2Score += ((this.chromosome["o" + matchTier]) * (c2Stats.averageOdds / (c1Stats.averageOdds + c2Stats.averageOdds)));
+		if (this.debug) {
+			console.log("c1Score after odds weight: " + c1Score.toFixed(2));
+			console.log("c2Score after odds weight: " + c2Score.toFixed(2));
 		}
 	}
 
 	//and then win time weighting
-	if (c1Stats.averageWinTime != null && c2Stats.averageWinTime != null) {
-		if (c1Stats.averageWinTime < c2Stats.averageWinTime) {
-            c1Score += timeWeight / 2;
-			if (this.debug) {
-				console.log("c1Score after win time weight: " + c1Score.toFixed(2));
-				console.log("c2Score after win time weight: " + c2Score.toFixed(2));
-			}
+	if ((c1Stats.averageWinTime != null) && (c2Stats.averageWinTime != null) && (matchTier != null) && (charTiers.indexOf(matchTier) >=0)) {
+        c1Score += ((this.chromosome["wt" + matchTier]) * (1 - (c1Stats.averageWinTime / (c1Stats.averageWinTime + c2Stats.averageWinTime))));
+		c2Score += ((this.chromosome["wt" + matchTier]) * (1 - (c2Stats.averageWinTime / (c1Stats.averageWinTime + c2Stats.averageWinTime))));
+		if (this.debug) {
+			console.log("c1Score after win time weight: " + c1Score.toFixed(2));
+			console.log("c2Score after win time weight: " + c2Score.toFixed(2));
 		}
-        else if (c1Stats.averageWinTime > c2Stats.averageWinTime) {
-            c2Score += timeWeight / 2;
-			if (this.debug) {
-				console.log("c1Score after win time weight: " + c1Score.toFixed(2));
-				console.log("c2Score after win time weight: " + c2Score.toFixed(2));
-			}
-		}
-        if (this.debug) timeMessage = "avg win time (red:blue) -> ("+formatString(c1Stats.averageWinTimeRaw.toFixed(0)+" : "+c2Stats.averageWinTimeRaw.toFixed(0), messagelength)+")";
+		if (this.debug) timeMessage = "avg win time (red:blue) -> ("+formatString(c1Stats.averageWinTimeRaw.toFixed(0)+" : "+c2Stats.averageWinTimeRaw.toFixed(0), messagelength)+")";
 	}
 
 	//and then loss time weighting
-	if (c1Stats.averageLossTime != null && c2Stats.averageLossTime != null) {
-		if (c1Stats.averageLossTime > c2Stats.averageLossTime) {
-			c1Score += timeWeight / 2;
-			if (this.debug) {
-				console.log("c1Score after loss time weight: " + c1Score.toFixed(2));
-				console.log("c2Score after loss time weight: " + c2Score.toFixed(2));
-			}
-		}
-		else if (c1Stats.averageLossTime < c2Stats.averageLossTime) {
-			c2Score += timeWeight / 2;
-			if (this.debug) {
-				console.log("c1Score after loss time weight: " + c1Score.toFixed(2));
-				console.log("c2Score after loss time weight: " + c2Score.toFixed(2));
-			}
+	if ((c1Stats.averageLossTime != null) && (c2Stats.averageLossTime != null) && (matchTier != null) && (charTiers.indexOf(matchTier) >=0)) {
+		c1Score += ((this.chromosome["lt" + matchTier]) * (c1Stats.averageLossTime / (c1Stats.averageLossTime + c2Stats.averageLossTime)));
+		c2Score += ((this.chromosome["lt" + matchTier]) * (c2Stats.averageLossTime / (c1Stats.averageLossTime + c2Stats.averageLossTime)));
+		if (this.debug) {
+			console.log("c1Score after loss time weight: " + c1Score.toFixed(2));
+			console.log("c2Score after loss time weight: " + c2Score.toFixed(2));
 		}
 		if (this.debug) {
 			var msg = "  ::  avg loss time (red:blue) -> ("+formatString(c1Stats.averageLossTimeRaw.toFixed(0)+" : "+c2Stats.averageLossTimeRaw.toFixed(0), messagelength)+")";
@@ -562,14 +711,16 @@ ConfidenceScore.prototype.execute = function(info) {
 	//and uh, crowd favor weighting?
 	if (c1Stats.cfPercent != null && c2Stats.cfPercent != null) {
 		if (c1Stats.cfPercent > c2Stats.cfPercent) {
-			c1Score += crowdFavorWeight;
+			c1Score += (crowdFavorWeight * (c1Stats.cfPercent / (c1Stats.cfPercent + c2Stats.cfPercent)));
+			c2Score += (crowdFavorWeight * (c2Stats.cfPercent / (c1Stats.cfPercent + c2Stats.cfPercent)));
 			if (this.debug) {
 				console.log("c1Score after crowd favor weight: " + c1Score.toFixed(2));
 				console.log("c2Score after crowd favor weight: " + c2Score.toFixed(2));
 			}
 		}
 		else if (c1Stats.cfPercent < c2Stats.cfPercent) {
-			c2Score += crowdFavorWeight;
+			c2Score += (crowdFavorWeight * (c2Stats.cfPercent / (c1Stats.cfPercent + c2Stats.cfPercent)));
+			c1Score += (crowdFavorWeight * (c1Stats.cfPercent / (c1Stats.cfPercent + c2Stats.cfPercent)));
 			if (this.debug) {
 				console.log("c1Score after crowd favor weight: " + c1Score.toFixed(2));
 				console.log("c2Score after crowd favor weight: " + c2Score.toFixed(2));
@@ -583,14 +734,16 @@ ConfidenceScore.prototype.execute = function(info) {
 	//and the last bs stat
 	if (c1Stats.ifPercent != null && c2Stats.ifPercent != null) {
 		if (c1Stats.ifPercent > c2Stats.ifPercent) {
-			c1Score += illumFavorWeight;
+			c1Score += (illumFavorWeight * (c1Stats.ifPercent / (c1Stats.ifPercent + c2Stats.ifPercent)));
+			c2Score += (illumFavorWeight * (c2Stats.ifPercent / (c1Stats.ifPercent + c2Stats.ifPercent)));
 			if (this.debug) {
 				console.log("c1Score after illuminati favor weight: " + c1Score.toFixed(2));
 				console.log("c2Score after illuminati favor weight: " + c2Score.toFixed(2));
 			}
 		}
 		else if (c1Stats.ifPercent < c2Stats.ifPercent) {
-			c2Score += illumFavorWeight;
+			c2Score += (illumFavorWeight * (c2Stats.ifPercent / (c1Stats.ifPercent + c2Stats.ifPercent)));
+			c1Score += (illumFavorWeight * (c1Stats.ifPercent / (c1Stats.ifPercent + c2Stats.ifPercent)));
 			if (this.debug) {
 				console.log("c1Score after illuminati favor weight: " + c1Score.toFixed(2));
 				console.log("c2Score after illuminati favor weight: " + c2Score.toFixed(2));
@@ -627,7 +780,7 @@ ConfidenceScore.prototype.execute = function(info) {
 
 	var winnerPoints = (this.prediction == c1.name) ? c1Score : c2Score;
 	var totalAvailablePoints = c1Score + c2Score;
-	this.confidence = parseFloat((winnerPoints / (totalWeight)));  //NOW TAKES INTO ACCOUNT DYNAMIC WEIGHTING I IMPLEMENTED
+	this.confidence = parseFloat((winnerPoints / totalAvailablePoints));  //NOW TAKES INTO ACCOUNT DYNAMIC WEIGHTING I IMPLEMENTED
 	
 	if (this.debug) {
 		console.log("totalAvailablePoints is " + totalAvailablePoints.toFixed(2));
