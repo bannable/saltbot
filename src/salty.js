@@ -1,3 +1,5 @@
+var isExhibs;  //global controls whether or not to bet on exhibs- accessed through window.isExhibs
+
 var Settings = function() {
 	this.nextStrategy = null;
 	this.video = true;
@@ -120,6 +122,7 @@ var Controller = function() {
 					console.log("- match result code: " + "c1:" + mr.c1 + "_c2:" + mr.c2 + "_w:" + mr.w + "_s:" + mr.sn + "_p:" + mr.pw + "_t:" + mr.t + "_m:" + mr.m + "_o:" + mr.o + "_t:" + mr.ts);
 
 					var s = self;
+					//gets match records, character data, chromosomes, and bettors from storage and passes them as an object to the function as the 'results' variable argument.
 					chrome.storage.local.get(["matches_v1", "characters_v1", "chromosomes_v1", "bettors_v1"], function(results) {
 						var self = s;
 						var matches_v1 = null;
@@ -128,16 +131,16 @@ var Controller = function() {
 						// self.best_chromosome=results.best_chromosome;
 
 						//store new match record
-						if (results.hasOwnProperty("matches_v1")) {
-							results.matches_v1.push(mr);
-							matches_v1 = results.matches_v1;
-						} else {
+						if (results.hasOwnProperty("matches_v1")) {  //checking to make sure results has initialized properly from storage
+							results.matches_v1.push(mr);  //add match results to match database array in results
+							matches_v1 = results.matches_v1;  //mirror updated matchup database to a variable
+						} else {  //if it doesn't load from storage, it's empty, initialize it and push the new matchup record to it
 							matches_v1 = [];
 							matches_v1.push(mr);
 						}
 
 						//character records:
-						if (results.hasOwnProperty("characters_v1"))
+						if (results.hasOwnProperty("characters_v1"))  //see above for matches
 							characters_v1 = results.characters_v1;
 						else
 							characters_v1 = [];
@@ -226,6 +229,7 @@ var Controller = function() {
 					nullMatch.strategy.adjustLevel(nullMatch.getBalance());
 					level = nullMatch.strategy.level;
 				}
+				//technically I believe the bot "starts" here by calling a new instance of match function from tracker.js
 				switch(self.settings.nextStrategy) {
 				case "o":
 					self.currentMatch = new Match(new Observer());
@@ -248,7 +252,7 @@ var Controller = function() {
 
 			}
 
-			//skip team matches, mirror matches
+			//skip team matches, mirror matches, bad character names, and exhib matches
 			if (self.currentMatch.names[0].toLowerCase().indexOf("team") > -1 || self.currentMatch.names[1].toLowerCase().indexOf("team") > -1) {
 				self.currentMatch = null;
 				console.log("- skipping team match");
@@ -258,6 +262,9 @@ var Controller = function() {
 			} else if (self.currentMatch.names[0].indexOf(",") > -1 || self.currentMatch.names[1].indexOf(",") > -1) {
 				self.currentMatch = null;
 				console.log("- skipping match, comma in name, too lazy to deal with escape characters");
+			} else if (window.isExhibs == true) {  //this is actually where the exhib-skipping magic happens
+				self.currentMatch = null;
+				console.log("- skipping exhibition match");
 			} else {
 				self.currentMatch.init();
 			}
@@ -366,7 +373,7 @@ if (window.location.href == "http://www.saltybet.com/" || window.location.href =
 	});
 	chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
 		var self = ctrl;
-		// console.log("-\nmessage from Waifu:\t" + message);
+		console.log("-\nmessage from Waifu:\t" + message);
 		if ( typeof message === "string") {
 			var winMessageIndicator = " wins";
 			var newMatchIndicator = "Bets are OPEN for ";
@@ -385,12 +392,25 @@ if (window.location.href == "http://www.saltybet.com/" || window.location.href =
 					matches = regexLoose.exec(message);
 					matches.push("U", "U");
 				}
-				if (matches[4].indexOf("matchmaking") > -1)
+				if (matches[4].indexOf("matchmaking") > -1) {
 					matches[4] = "m";
-				else if (matches[4].indexOf("tournament") > -1)
+				}
+				else if (matches[4].indexOf("tournament") > -1) {
 					matches[4] = "t";
-				else if (matches[4].indexOf("exhibition") > -1)
+				}
+				else if (matches[4].indexOf("exhibitions") > -1) {
 					matches[4] = "e";
+				}
+				
+				if (message.search("exhibition") == -1) {
+					window.isExhibs = false;
+					console.log("No Exhibition Detected");
+				}
+				else {
+					window.isExhibs = true;
+					console.log("Exhibition Detected");
+				}
+				
 
 				self.infoFromWaifu.push({
 					"c1" : matches[1],
