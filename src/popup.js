@@ -235,6 +235,8 @@ Simulator.prototype.evalMutations = function(mode) {
 
 		// process matches
 		for (var i = 0; i < matches.length; i++) {
+			
+			console.log("Processing match " + i + " out of " + matches.length);
 
 			var info = {
 				"character1" : updater.getCharacter(matches[i].c1, characterRecords, namesOfCharactersWhoAlreadyHaveRecords),
@@ -290,7 +292,7 @@ Simulator.prototype.evalMutations = function(mode) {
 									nonUpsetsBetOn += 1;
 							}
 							
-							if (!predictionWasCorrect && strategy.confidence && strategy.confidence< 0.9){
+							if (!predictionWasCorrect && strategy.confidence && strategy.confidence< 0.7){
 								lossMinimizationAmount+=1-strategy.confidence;
 								minimizedLosses+=1;
 							}
