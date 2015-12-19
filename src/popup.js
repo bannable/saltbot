@@ -5,9 +5,9 @@ $(document).ready(function() {
 	$("#upload_r").on("click", function(e) {
 		e.stopPropagation();
 	});
-	
+
 	$("#bic").on("click", function (e) {
-		$('#upload_c').trigger('click');		
+		$('#upload_c').trigger('click');
 	});
 	$("#bir").on("click", function (e) {
 		$('#upload_r').trigger('click');
@@ -83,11 +83,11 @@ var irClick = function() {
 	var files = document.getElementById('upload_r').files;
 	if(files.length>0)
 		console.log("Upload successful.");
-	else 
-		console.log("Upload canceled.");	
+	else
+		console.log("Upload canceled.");
 	console.log("Attempting to read file...");
-	
-	var file = files[0];	
+
+	var file = files[0];
 	var reader = new FileReader();
 	reader.onload = onFileReadRecord;
 	reader.readAsText(file);
@@ -97,11 +97,11 @@ var icClick = function() {
 	var files = document.getElementById('upload_c').files;
 	if(files.length>0)
 		console.log("Upload successful.");
-	else 
-		console.log("Upload canceled.");	
+	else
+		console.log("Upload canceled.");
 	console.log("Attempting to read file...");
-	
-	var file = files[0];	
+
+	var file = files[0];
 	var reader = new FileReader();
 	reader.onload = onFileReadChromosome;
 	reader.readAsText(file);
@@ -145,17 +145,6 @@ Simulator.prototype.getBetAmount = function(strategy, index) {
 		amountToBet = strategy.getBetAmount(balance, tournament, debug);
 
 	return amountToBet;
-};
-Simulator.prototype.applyPenalties = function(c) {
-	// anti-domination
-	var adOdds = c.timeWeight + c.winPercentageWeight + c.crowdFavorWeight + c.illumFavorWeight;
-	var adTime = c.oddsWeight + c.winPercentageWeight + c.crowdFavorWeight + c.illumFavorWeight;
-	var adWPer = c.oddsWeight + c.timeWeight + c.crowdFavorWeight + c.illumFavorWeight;
-	var adCFW = c.oddsWeight + c.timeWeight + c.winPercentageWeight + c.illumFavorWeight;
-	var adIFW = c.oddsWeight + c.timeWeight + c.winPercentageWeight + c.crowdFavorWeight;
-	if (c.oddsWeight > adOdds || c.timeWeight > adTime || c.winPercentageWeight > adWPer || c.crowdFavorWeight > adCFW || c.illumFavorWeight > adIFW)
-		return 0.05;
-	return 1;
 };
 Simulator.prototype.evalMutations = function(mode) {
 	var self = this;
@@ -235,8 +224,6 @@ Simulator.prototype.evalMutations = function(mode) {
 
 		// process matches
 		for (var i = 0; i < matches.length; i++) {
-			
-			console.log("Processing match " + i + " out of " + matches.length);
 
 			var info = {
 				"character1" : updater.getCharacter(matches[i].c1, characterRecords, namesOfCharactersWhoAlreadyHaveRecords),
@@ -273,7 +260,7 @@ Simulator.prototype.evalMutations = function(mode) {
 					totalPercentCorrect[k] = correct[k] / totalBettedOn[k] * 100;
 					data[k].push([totalBettedOn[k], totalPercentCorrect[k]]);
 
-					if (mode == "mass")
+					if (mode == "mass") {
 						if (matches[i].o != "U") {
 							var t = matches[i].o.split(":");
 							var o1 = parseFloat(t[0]);
@@ -291,17 +278,13 @@ Simulator.prototype.evalMutations = function(mode) {
 								if (predictionWasCorrect)
 									nonUpsetsBetOn += 1;
 							}
-							
-							if (!predictionWasCorrect && strategy.confidence && strategy.confidence< 0.7){
+
+							if (!predictionWasCorrect && strategy.confidence && strategy.confidence < 0.70){
 								lossMinimizationAmount+=1-strategy.confidence;
 								minimizedLosses+=1;
 							}
-								
-
-							// var avgOddsC1 = updater.getCharAvgOdds(matches[i].c1);
-							// var avgOddsC2 = updater.getCharAvgOdds(matches[i].c2);
-
 						}
+					}
 				}
 				//update simulated money
 				if (matches[i].o != "U") {
@@ -334,7 +317,7 @@ Simulator.prototype.evalMutations = function(mode) {
 				nudSum += nonupsetDenominators[zzz];
 			}
 
-			console.log("avg denom: " + (dSum / denominators.length).toFixed(0) + ", avg upset: " + (udSum / upsetDenominators.length).toFixed(0) + ", avg nonupset: " + (nudSum / nonupsetDenominators.length).toFixed(0) + 
+			console.log("avg denom: " + (dSum / denominators.length).toFixed(0) + ", avg upset: " + (udSum / upsetDenominators.length).toFixed(0) + ", avg nonupset: " + (nudSum / nonupsetDenominators.length).toFixed(0) +
 			", \nupsets called correctly: " + (upsetsBetOn / upsetDenominators.length * 100).toFixed(2) + "%, (" + upsetsBetOn + "/" + upsetDenominators.length + ")"+
 			", \nnonupsets called correctly: " + (nonUpsetsBetOn / nonupsetDenominators.length * 100).toFixed(2) + "%, (" + nonUpsetsBetOn + "/" + nonupsetDenominators.length + ")"+
 			", \nminimized losses: "+ (minimizedLosses / matches.length * 100).toFixed(2) + "%, (" + minimizedLosses + "/" + matches.length + "), avg loss minimization amount: "
@@ -349,20 +332,17 @@ Simulator.prototype.evalMutations = function(mode) {
 			var nextGeneration = [];
 			var money = true;
 			var accuracy = false;
-			var unshackle = true;
 
 			if (mode == "evolution") {
 				for (var l = 0; l < orders.length; l++) {
-					var penalty = self.applyPenalties(orders[l].chromosome);
-					if (unshackle) penalty = 1;
-					sortingArray.push([orders[l].chromosome, totalPercentCorrect[l], self.money[l], penalty]);
+					sortingArray.push([orders[l].chromosome, totalPercentCorrect[l], self.money[l]]);
 				}
 				sortingArray.sort(function(a, b) {
 					if (!money && accuracy)
-						return (b[1] * b[3]) - (a[1] * a[3]);
+						return (b[1] - a[1]);
 					if (money && !accuracy)
-						return (b[2] * b[3]) - (a[2] * a[3]);
-					return (b[1] * b[2] * b[3]) - (a[1] * a[2] * a[3]);
+						return (b[2] - a[2]);
+					return (b[1] * b[2]) - (a[1] * a[2]);
 				});
 
 				var top = Math.round(sortingArray.length / 2);
@@ -409,7 +389,7 @@ Simulator.prototype.evalMutations = function(mode) {
 					document.getElementById('msgbox').value = "g(" + roundsOfEvolution + "), best: " + bestPercent.toFixed(1) + "%, $" + bestMoney.toFixed(0);
 					setTimeout(function() {
 						simulator.evalMutations("evolution");
-					}, 5000);
+					}, 2000);
 				});
 			} else if (mode == "mass") {
 				console.log("\n\n--------------- matches processed: " + matches.length);
@@ -495,4 +475,3 @@ document.addEventListener('DOMContentLoaded', function() {
 	});
 
 });
-

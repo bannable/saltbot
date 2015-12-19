@@ -120,6 +120,7 @@ Updater.prototype.updateCharactersFromMatch = function(mObj, c1Obj, c2Obj) {
 
 };
 
+// Return my accuracy
 var dr = function(sortByMoney) {
 	chrome.storage.local.get(["matches_v1", "characters_v1", "bettors_v1"], function(results) {
 		var bw10 = [];
@@ -166,6 +167,7 @@ var pr = function() {
 	dr(true);
 };
 
+// Export match data
 var er = function() {
 	chrome.storage.local.get(["matches_v1"], function(results) {
 		var lines = [];
@@ -197,6 +199,7 @@ var er = function() {
 	});
 };
 
+// Import match records
 var ir = function(f) {
 	var updater = new Updater();
 	var matchRecords = [];
@@ -265,6 +268,7 @@ var ir = function(f) {
 	});
 };
 
+// Export chromosome
 var ec = function() {
 	chrome.storage.local.get(["chromosomes_v1"], function(results) {
 		if (results.chromosomes_v1 && results.chromosomes_v1.length > 0) {
@@ -288,6 +292,7 @@ var ec = function() {
 	});
 };
 
+// Import chromosome
 var ic = function(f) {
 	var chromosome = new Chromosome();
 	try {
@@ -297,7 +302,7 @@ var ic = function(f) {
 		console.log("- Could not read chromosome file.");
 		return;
 	}
-	
+
 	//get the chromosomes currently saved in the list
 	chrome.storage.local.get(["chromosomes_v1"], function(results) {
 		var chromosomes = results.chromosomes_v1;
@@ -313,8 +318,8 @@ var ic = function(f) {
 			console.log("- Chromosome imported successfully.");
 		});
 	});
-	
-	
+
+
 };
 
 if (window.location.href == "http://www.saltybet.com/" || window.location.href == "http://mugen.saltybet.com/")

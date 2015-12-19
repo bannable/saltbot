@@ -38,8 +38,8 @@ if (window.location.href == "http://www.twitch.tv/saltybet") {
 				parent.removeChild(parent.childNodes[0]);
 			}
 		});
-		
-		
+
+
 		$(".scroll.chat-messages.js-chat-messages").waitUntilExists(function() {
 			// put a mutation observer on the chat which reports back to the main content script whenever Waifu speaks
 			var chatWindow = document.getElementsByClassName("scroll chat-messages js-chat-messages")[0];
@@ -72,9 +72,9 @@ if (window.location.href == "http://www.twitch.tv/saltybet") {
 					chrome.runtime.sendMessage({
 						message : Waifu4uLines[j]
 					}, function(response) {
-						console.log("response received in twitch content");
+						//console.log("response received in twitch content");
 					});
-					console.log("-\nnew message from Waifu:\n" + Waifu4uLines[j]);
+					//console.log("-\nnew message from Waifu:\n" + Waifu4uLines[j]);
 				}
 				observer.takeRecords();
 			});
