@@ -8,9 +8,9 @@ var Strategy = function(sn) {
 	this.strategyName = sn;
 	this.prediction = null;
 	this.debug = true;
-	this.levels = [[0, 1000, 0],  //between 0-1000 multiply flatAmount by 0; all-in
-				   [1000, 10000, 1],  //between 1000-10000 multiply flatAmount by 1, etc down the way
-				   [10000, 100000, 10],
+	this.levels = [[0, 7700, 0],  //between 0-1000 multiply flatAmount by 0; all-in
+				   [7700, 10000, 10],  //between 1000-10000 multiply flatAmount by 1, etc down the way
+				   [10000, 100000, 15],
 				   [100000, 500000, 25],
 				   [500000, 1000000, 100],
 				   [1000000, 5000000, 250],
@@ -49,11 +49,11 @@ Strategy.prototype.flatBet = function(balance, tournament, debug) {
 	var flatAmount = 100;  //base bet amount
 	var multiplierIndex = 2;  //index of levels[x[]] that holds the multiplier value
 	var intendedBet = flatAmount * this.levels[this.level][multiplierIndex] * this.confidence;  //multiply flat amount based on salt total and confidence
-	var bailout = this.getBailout(tournament)
+	var bailout = this.getBailout(tournament);
 	if (debug)
 		console.log("- betting at level: " + this.level + ", confidence: " + (this.confidence * 100).toFixed(2));  //output betting scheme to console
 	if (!tournament && intendedBet < bailout && 2*bailout > balance) {
-		if (debug) console.log("- " + balance + " too close to bailout (" + bailout + "), betting " + bailout + " instead of " + intendedBet)
+		if (debug) console.log("- " + balance + " too close to bailout (" + bailout + "), betting " + bailout + " instead of " + intendedBet);
 		intendedBet = bailout;
 	}
 	return Math.ceil(intendedBet);  //returns bet rounded up to the nearest int
@@ -86,7 +86,6 @@ Strategy.prototype.getBetAmount = function(balance, tournament, debug) {  //is t
 	if (!this.confidence)
 		this.confidence = 1;  //make sure confidence exists and has a value
 
-	var minimum = 100 + Math.round(Math.random() * 50);
 	var amountToBet;
 	var bailout = this.getBailout(tournament);
 
@@ -99,7 +98,7 @@ Strategy.prototype.getBetAmount = function(balance, tournament, debug) {  //is t
 			amountToBet = bailout;  //makes sure to always bet at least bailout
 		}
 		if (amountToBet > balance)
-        	amountToBet = balance;  //makes sure to never try to bet more than the current balance
+      amountToBet = balance;  //makes sure to never try to bet more than the current balance
 		if (debug) {
 			if (allIn)
 				console.log("- ALL IN: " + balance);
@@ -112,8 +111,6 @@ Strategy.prototype.getBetAmount = function(balance, tournament, debug) {  //is t
 		}
 	} else if (!(this.lowBet && this instanceof RatioConfidence)) {
 		amountToBet = Math.round(balance * .1 * this.confidence);
-		if (amountToBet > balance * .1)
-			amountToBet = Math.round(balance * .1);
 		if (amountToBet < bailout){
 			if (debug)
 				console.log("- amount is less than bailout ("+amountToBet+"), betting bailout: "+bailout);
@@ -121,7 +118,7 @@ Strategy.prototype.getBetAmount = function(balance, tournament, debug) {  //is t
 		} else if (debug)
 			console.log("- betting: " + balance + " x .10 =(" + (balance * .1) + ") x cf(" + (this.confidence * 100).toFixed(2) + "%) = " + amountToBet);
 	} else {
-		var p05 = Math.ceil(balance * .01);
+		var p05 = Math.ceil(balance * .05);
 		var cb = Math.ceil(balance * this.confidence);
 		amountToBet = (p05 < cb) ? p05 : cb;
 		if (amountToBet < bailout)
@@ -282,10 +279,11 @@ Chromosome.prototype.mate = function(other) {
 		if ( typeof offspring[i] != "function") {
 			offspring[i] = (Math.random() > 0.5) ? this[i] : other[i];
 			// 20% chance of mutation
-			if (Math.random() < 0.2 && offspring[i] != null)
+			if (Math.random() < 0.2 && offspring[i] != null) {
 				var radiation = Math.random() + Math.random(); // Calculate radiation only when we are going to mutate
 				radiation *= radiation;
 				offspring[i] *= radiation;
+			}
 		}
 	}
 	return offspring;
