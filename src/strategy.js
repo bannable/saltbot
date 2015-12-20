@@ -44,6 +44,8 @@ Strategy.prototype.getBailout = function(tournament){
 			return 100 + level*25;
 };
 Strategy.prototype.flatBet = function(balance, tournament, debug) {
+	if (this.level == 0)
+		return balance;
 	var flatAmount = 100;  //base bet amount
 	var multiplierIndex = 2;  //index of levels[x[]] that holds the multiplier value
 	var intendedBet = flatAmount * this.levels[this.level][multiplierIndex] * this.confidence;  //multiply flat amount based on salt total and confidence
@@ -54,10 +56,7 @@ Strategy.prototype.flatBet = function(balance, tournament, debug) {
 		if (debug) console.log("- " + balance + " too close to bailout (" + bailout + "), betting " + bailout + " instead of " + intendedBet)
 		intendedBet = bailout;
 	}
-	if (this.level == 0)
-		return balance;  //all-in at level 0
-	else
-		return Math.ceil(intendedBet);  //returns bet rounded up to the nearest int
+	return Math.ceil(intendedBet);  //returns bet rounded up to the nearest int
 };
 Strategy.prototype.adjustLevel = function(balance) {
 	if (!this.level)
