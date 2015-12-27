@@ -236,7 +236,7 @@ var Controller = function() {
 					self.currentMatch = new Match(new RatioConfidence());
 					break;
 				case "cs":
-					self.currentMatch = new Match(new ConfidenceScore(self.bestChromosome, level, self.lastMatchCumulativeBetTotal));
+					self.currentMatch = new Match(new ConfidenceScore(self.bestChromosome, level));
 					break;
 				case "ipu":
 					self.currentMatch = new Match(new InternetPotentialUpset(new ChromosomeIPU(), level));

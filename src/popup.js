@@ -387,9 +387,13 @@ Simulator.prototype.evalMutations = function(mode) {
 					roundsOfEvolution += 1;
 					console.log("\n\n-------- end of gen" + nextGeneration.length + "  " + roundsOfEvolution + ", m proc'd w/ CS " + totalBettedOn[0] + "/" + matches.length + "=" + (totalBettedOn[0] / matches.length * 100).toFixed(0) + "%m -> " + bestPercent.toFixed(1) + "%c, $" + bestMoney.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "   -----------------\n\n");
 					document.getElementById('msgbox').value = "g(" + roundsOfEvolution + "), best: " + bestPercent.toFixed(1) + "%, $" + bestMoney.toFixed(0);
-					setTimeout(function() {
-						simulator.evalMutations("evolution");
-					}, 2000);
+					if (roundsOfEvolution < 200) {
+						setTimeout(function() {
+							simulator.evalMutations("evolution");
+						}, 2000);
+					} else {
+						console.log("Finished 200 rounds of evolution.");
+					}
 				});
 			} else if (mode == "mass") {
 				console.log("\n\n--------------- matches processed: " + matches.length);
@@ -414,7 +418,7 @@ Simulator.prototype.evalMutations = function(mode) {
 };
 Simulator.prototype.initializePool = function() {
 	var pool = [new Chromosome(), new Chromosome()];
-	while (pool.length < 100) {
+	while (pool.length < 150) {
 		if (pool.length < 20) {
 			var offspring = pool[0].mate(pool[1]);
 			var foundDuplicate = false;
